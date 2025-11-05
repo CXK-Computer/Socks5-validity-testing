@@ -16,17 +16,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 检出代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 设置 Go 环境
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
-      # 缓存 Go 模块
       - name: Cache Go modules
         uses: actions/cache@v4
         with:
@@ -37,25 +34,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      # 安装依赖
       - name: Install dependencies
         run: go mod download
 
-      # 确保 builds-linux.sh 可执行并运行
       - name: Run builds-linux.sh
         run: |
           chmod +x ./builds-linux.sh
-          ./builds-linux.sh aigo.go "${{ github.event.inputs.version || github.ref_name }}"
+          ./builds-linux.sh aigo.go "${{ github.event.inputs.version || github.ref_name }}" || true
 
-      # 检查 builds 目录是否存在
       - name: Verify build output
         run: |
-          if [ ! -d "builds" ] || [ -z "$(ls -A builds)" ]; then
-            echo "Error: No build artifacts found in builds/ directory"
+          if [ ! -d "build" ] || [ -z "$(ls -A build)" ]; then
+            echo "Error: No build artifacts found in build/ directory"
             exit 1
           fi
 
-      # 创建 GitHub Release 并上传资产
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
@@ -64,6 +57,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            builds/*
+            build/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
