@@ -1,70 +1,122 @@
 @echo off
 setlocal EnableDelayedExpansion
+:: æ­¤è„šæœ¬ç”¨äº Windows å¹³å°ï¼Œç¼–è¯‘ Go ç¨‹åºä¸ºä¸åŒå¹³å°çš„å¯æ‰§è¡Œæ–‡ä»¶ã€‚
+:: å‚æ•°ï¼š
+:: %1: Go æ–‡ä»¶åï¼ˆé»˜è®¤: aigo.goï¼‰
+:: %2: ç‰ˆæœ¬å·ï¼ˆé»˜è®¤: v1.03ï¼‰
+:: %3: è¾“å‡ºæ–‡ä»¶åå‰ç¼€ï¼ˆé»˜è®¤: proxy-checkerï¼‰
+:: %4: é…ç½®æ–‡ä»¶åï¼ˆé»˜è®¤: config.iniï¼Œå°†å¤åˆ¶åˆ°æ¯ä¸ªå¹³å°çš„æ„å»ºç›®å½•ï¼Œå¦‚æœå­˜åœ¨ï¼‰
 
-:: ´Ë½Å±¾ÓÃÓÚ Windows Æ½Ì¨£¬±àÒë Go ³ÌĞòÎª²»Í¬Æ½Ì¨µÄ¿ÉÖ´ĞĞÎÄ¼ş¡£
-
-:: ÉèÖÃÄ¬ÈÏ Go ÎÄ¼şÎª main.go£¬»òÊ¹ÓÃÃüÁîĞĞ²ÎÊıÖ¸¶¨µÄÎÄ¼ş
 set GO_FILE=%1
 if "%GO_FILE%"=="" set GO_FILE=aigo.go
 
-echo --- ¿ªÊ¼Îª²»Í¬Æ½Ì¨±àÒë¿ÉÖ´ĞĞ³ÌĞò ---
+set VERSION=%2
+if "%VERSION%"=="" set VERSION=v1.0.3
 
-:: Èç¹û builds Ä¿Â¼²»´æÔÚ£¬Ôò´´½¨Ëü
+set PREFIX=%3
+if "%PREFIX%"=="" set PREFIX=s5ä»£ç†æ‰¹é‡æ£€æµ‹
+
+set CONFIG_FILE=%4
+if "%CONFIG_FILE%"=="" set CONFIG_FILE=config.ini
+
+echo --- å¼€å§‹ä¸ºä¸åŒå¹³å°ç¼–è¯‘å¯æ‰§è¡Œç¨‹åº ---
+echo ä½¿ç”¨ Go æ–‡ä»¶: %GO_FILE%
+echo ä½¿ç”¨ç‰ˆæœ¬å·: %VERSION%
+echo ä½¿ç”¨å‰ç¼€: %PREFIX%
+echo ä½¿ç”¨é…ç½®æ–‡ä»¶: %CONFIG_FILE% (å¦‚æœå­˜åœ¨ï¼Œå°†å¤åˆ¶ä¸€ä¸ªæ¨¡æ¿ç‰ˆæœ¬ä»¥é¿å…éšç§æ³„éœ²)
+
+:: å¦‚æœ builds ç›®å½•ä¸å­˜åœ¨ï¼Œåˆ™åˆ›å»ºå®ƒ
 if not exist builds (
     mkdir builds
-    echo  ´´½¨ 'builds' Ä¿Â¼
+    echo åˆ›å»º 'builds' ç›®å½•
 )
 
+:: åˆ›å»ºä¸€ä¸ªç©ºçš„ config.ini æ¨¡æ¿ä»¥é¿å…å¤åˆ¶ç”¨æˆ·éšç§æ•°æ®
+set TEMPLATE_CONFIG=builds\config_template.ini
+echo [telegram] > %TEMPLATE_CONFIG%
+echo bot_token= >nul >> %TEMPLATE_CONFIG%
+echo chat_id= >nul >> %TEMPLATE_CONFIG%
+echo [settings] >nul >> %TEMPLATE_CONFIG%
+echo preset_proxy= >nul >> %TEMPLATE_CONFIG%
+echo fdip_dir=fdip >nul >> %TEMPLATE_CONFIG%
+echo output_dir=output >nul >> %TEMPLATE_CONFIG%
+echo check_timeout=10 >nul >> %TEMPLATE_CONFIG%
+echo max_concurrent=100 >nul >> %TEMPLATE_CONFIG%
+echo åˆ›å»º config.ini æ¨¡æ¿å®Œæˆã€‚
+
 :: Windows 64-bit
-echo  ±àÒë Windows (amd64)...
+echo ç¼–è¯‘ Windows (amd64)...
 set GOOS=windows
 set GOARCH=amd64
-go build -o builds\proxy-checker-windows-amd64.exe %GO_FILE%
-echo  Windows ±àÒëÍê³É¡£
+set PLATFORM=windows-amd64
+mkdir builds\%PLATFORM%
+go build -o builds\%PLATFORM%\%PREFIX%-%PLATFORM%-%VERSION%.exe %GO_FILE%
+copy %TEMPLATE_CONFIG% builds\%PLATFORM%\%CONFIG_FILE%
+echo Windows ç¼–è¯‘å®Œæˆã€‚
 
 :: Linux 64-bit (most desktops/servers)
-echo  ±àÒë Linux (amd64)...
+echo ç¼–è¯‘ Linux (amd64)...
 set GOOS=linux
 set GOARCH=amd64
-go build -o builds\proxy-checker-linux-amd64 %GO_FILE%
-echo  Linux ±àÒëÍê³É¡£
+set PLATFORM=linux-amd64
+mkdir builds\%PLATFORM%
+go build -o builds\%PLATFORM%\%PREFIX%-%PLATFORM%-%VERSION% %GO_FILE%
+copy %TEMPLATE_CONFIG% builds\%PLATFORM%\%CONFIG_FILE%
+echo Linux ç¼–è¯‘å®Œæˆã€‚
 
 :: macOS 64-bit (Intel)
-echo  ±àÒë macOS (Intel)...
+echo ç¼–è¯‘ macOS (Intel)...
 set GOOS=darwin
 set GOARCH=amd64
-go build -o builds\proxy-checker-darwin-amd64 %GO_FILE%
-echo  macOS (Intel) ±àÒëÍê³É¡£
+set PLATFORM=darwin-amd64
+mkdir builds\%PLATFORM%
+go build -o builds\%PLATFORM%\%PREFIX%-%PLATFORM%-%VERSION% %GO_FILE%
+copy %TEMPLATE_CONFIG% builds\%PLATFORM%\%CONFIG_FILE%
+echo macOS (Intel) ç¼–è¯‘å®Œæˆã€‚
 
 :: macOS ARM64 (Apple Silicon)
-echo  ±àÒë macOS (Apple Silicon)...
+echo ç¼–è¯‘ macOS (Apple Silicon)...
 set GOOS=darwin
 set GOARCH=arm64
-go build -o builds\proxy-checker-darwin-arm64 %GO_FILE%
-echo  macOS (Apple Silicon) ±àÒëÍê³É¡£
+set PLATFORM=darwin-arm64
+mkdir builds\%PLATFORM%
+go build -o builds\%PLATFORM%\%PREFIX%-%PLATFORM%-%VERSION% %GO_FILE%
+copy %TEMPLATE_CONFIG% builds\%PLATFORM%\%CONFIG_FILE%
+echo macOS (Apple Silicon) ç¼–è¯‘å®Œæˆã€‚
 
 :: Linux ARM64 (e.g., Raspberry Pi 4, Termux on modern phones)
-echo  ±àÒë Linux (ARM64)...
+echo ç¼–è¯‘ Linux (ARM64)...
 set GOOS=linux
 set GOARCH=arm64
-go build -o builds\proxy-checker-linux-arm64 %GO_FILE%
-echo  Linux (ARM64) ±àÒëÍê³É¡£
+set PLATFORM=linux-arm64
+mkdir builds\%PLATFORM%
+go build -o builds\%PLATFORM%\%PREFIX%-%PLATFORM%-%VERSION% %GO_FILE%
+copy %TEMPLATE_CONFIG% builds\%PLATFORM%\%CONFIG_FILE%
+echo Linux (ARM64) ç¼–è¯‘å®Œæˆã€‚
 
 :: Android ARM64 (e.g., Termux on Android devices)
-echo  ±àÒë Android (arm64) for Termux...
+echo ç¼–è¯‘ Android (arm64) for Termux...
 set GOOS=android
 set GOARCH=arm64
-go build -o builds\proxy-checker-android-arm64 %GO_FILE%
-echo  Android (arm64) ±àÒëÍê³É¡£
+set PLATFORM=android-arm64
+mkdir builds\%PLATFORM%
+go build -o builds\%PLATFORM%\%PREFIX%-%PLATFORM%-%VERSION% %GO_FILE%
+copy %TEMPLATE_CONFIG% builds\%PLATFORM%\%CONFIG_FILE%
+echo Android (arm64) ç¼–è¯‘å®Œæˆã€‚
 
 :: Android ARM (e.g., Termux on older Android devices)
-echo  ±àÒë Android (arm) for Termux...
+echo ç¼–è¯‘ Android (arm) for Termux...
 set GOOS=android
 set GOARCH=arm
-go build -o builds\proxy-checker-android-arm %GO_FILE%
-echo  Android (arm) ±àÒëÍê³É¡£
+set PLATFORM=android-arm
+mkdir builds\%PLATFORM%
+go build -o builds\%PLATFORM%\%PREFIX%-%PLATFORM%-%VERSION% %GO_FILE%
+copy %TEMPLATE_CONFIG% builds\%PLATFORM%\%CONFIG_FILE%
+echo Android (arm) ç¼–è¯‘å®Œæˆã€‚
 
-echo. :: Ìí¼Ó¿ÕĞĞÒÔÌá¸ß¿É¶ÁĞÔ
-echo --- ËùÓĞ±àÒëÍê³É£¡ÎÄ¼şÒÑ´æ·ÅÔÚ builds\ Ä¿Â¼ÏÂ¡£---
+:: åˆ é™¤ä¸´æ—¶æ¨¡æ¿æ–‡ä»¶
+del %TEMPLATE_CONFIG%
 
+echo. :: æ·»åŠ ç©ºè¡Œä»¥æé«˜å¯è¯»æ€§
+echo --- æ‰€æœ‰ç¼–è¯‘å®Œæˆï¼æ–‡ä»¶å·²å­˜æ”¾åœ¨ builds\ ç›®å½•ä¸‹çš„å­ç›®å½•ä¸­ï¼Œæ¯ä¸ªå¹³å°åŒ…å«å¯æ‰§è¡Œæ–‡ä»¶å’Œé…ç½®æ–‡ä»¶æ¨¡æ¿ã€‚---
 endlocal
