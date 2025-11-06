@@ -37,7 +37,7 @@
 
 [telegram]
 # Telegram Bot 的 API 令牌，用于发送消息
-bot_token = 3065667503:AAERtji4NMIDdAumVP--FBcK_I61EWhOCC0（示例）
+bot_token = 3065667503:xxxxxxxxxxxxxxxxxxxxxxxxxxx（示例）
 # 接收消息的 Telegram 聊天 ID，可以是个人ID或群组ID
 chat_id = 390641128（示例）
 
