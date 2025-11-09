@@ -1592,6 +1592,71 @@ func runCheck() {
 	log.Println(ColorGreen + "\033[1m🎉 程序运行结束！\033[0m" + ColorReset)
 }
 
+// ========= 5.5. 交互式设置 (新添加) =========
+
+// promptUser 是一个辅助函数，用于显示提示并获取用户输入
+// 它支持显示默认值，并在用户直接按 Enter 键时使用该默认值
+func promptUser(reader *bufio.Reader, promptText string, defaultValue string) string {
+	if defaultValue != "" {
+		fmt.Printf("%s [%s]: ", promptText, defaultValue)
+	} else {
+		fmt.Printf("%s: ", promptText)
+	}
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return defaultValue
+	}
+	return input
+}
+
+// interactiveSetup 引导用户完成首次配置并保存到 config.ini
+func interactiveSetup(configPath string) error {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println(ColorYellow + "\n--- 首次运行配置 ---" + ColorReset)
+	fmt.Println("未找到配置文件，请按照提示输入配置。")
+	fmt.Println("按 [Enter] 键可使用方括号 [] 中的默认值。")
+
+	// 创建一个新的、空的 ini 配置对象
+	cfg := ini.Empty()
+
+	// [telegram] section
+	fmt.Println(ColorCyan + "\n[1. Telegram 配置 (可选)]" + ColorReset)
+	botToken := promptUser(reader, "请输入 Telegram Bot Token (留空跳过)", "")
+	chatID := promptUser(reader, "请输入 Telegram Chat ID (留空跳过)", "")
+	cfg.Section("telegram").Key("bot_token").SetValue(botToken)
+	cfg.Section("telegram").Key("chat_id").SetValue(chatID)
+
+	// [settings] section
+	fmt.Println(ColorCyan + "\n[2. Settings 配置 (必填)]" + ColorReset)
+	fdipDir := promptUser(reader, "请输入代理文件输入目录", "fdip")
+	outputDir := promptUser(reader, "请输入结果文件输出目录", "output")
+	checkTimeoutStr := promptUser(reader, "请输入检测超时 (秒)", "10")
+	maxConcurrentStr := promptUser(reader, "请输入最大并发数", "100")
+	speedTestURL := promptUser(reader, "请输入测速文件地址", DEFAULT_SPEED_TEST_URL) // 使用已定义的常量 [cite: 2]
+	presetProxy := promptUser(reader, "请输入预设代理 (SOCKS5/HTTP, 多个用逗号分隔, 留空跳过)", "")
+
+	// 将值设置到 ini 对象中
+	cfg.Section("settings").Key("fdip_dir").SetValue(fdipDir)
+	cfg.Section("settings").Key("output_dir").SetValue(outputDir)
+	cfg.Section("settings").Key("check_timeout").SetValue(checkTimeoutStr)
+	cfg.Section("settings").Key("max_concurrent").SetValue(maxConcurrentStr)
+	cfg.Section("settings").Key("speed_test_url").SetValue(speedTestURL)
+	cfg.Section("settings").Key("preset_proxy").SetValue(presetProxy)
+
+	// 保存配置文件
+	err := cfg.SaveTo(configPath)
+	if err != nil {
+		return fmt.Errorf("❌ 无法保存配置文件到 %s: %w", configPath, err)
+	}
+
+	fmt.Println(ColorGreen + "✅ 配置已成功保存到 " + configPath + ColorReset)
+	fmt.Println("下次启动将自动加载此配置。")
+
+	// 重新加载配置到全局变量，以便本次运行继续
+	// 注意：这里我们让 main 函数中的 loadConfig 负责加载
+	return nil
+}
 // showMenu 显示主菜单并处理用户输入
 func showMenu() {
 	for {
@@ -1620,6 +1685,7 @@ func showMenu() {
 }
 
 // ========= 6. 主函数和辅助功能 =========
+// ========= 6. 主函数和辅助功能 =========
 
 func main() {
     // 设置日志格式
@@ -1629,30 +1695,45 @@ func main() {
     if err != nil {
         log.Fatalf("❌ 无法打开日志文件: %v", err)
     }
-    defer logFile.Close()
+    defer logFile.Close() [cite: 59]
     log.SetOutput(&LogWriter{})
+
     // 命令行参数定义
-    showHelp := flag.Bool("h", false, "显示帮助信息")
-    configPath := flag.String("c", "config.ini", "指定配置文件路径（默认 config.ini）")
-    speedURL := flag.String("s", "", "自定义测速文件地址（可选）")
-    inputDir := flag.String("i", "", "指定代理输入目录（可选，覆盖配置文件 settings.fdip_dir）")
-    outputDir := flag.String("o", "", "指定输出目录（可选，覆盖配置文件 settings.output_dir）")
+    showHelp := flag.Bool("h", false, "显示帮助信息") [cite: 59]
+    configPath := flag.String("c", "config.ini", "指定配置文件路径（默认 config.ini）") [cite: 59]
+    speedURL := flag.String("s", "", "自定义测速文件地址（可选）") [cite: 59]
+    inputDir := flag.String("i", "", "指定代理输入目录（可选，覆盖配置文件 settings.fdip_dir）") [cite: 59]
+    outputDir := flag.String("o", "", "指定输出目录（可选，覆盖配置文件 settings.output_dir）") [cite: 59]
     flag.Parse()
+
     // 处理帮助选项
-    if *showHelp {
+    if *showHelp { [cite: 59]
         fmt.Println("代理检测工具 v1.0.3 使用帮助：")
         fmt.Println(" -h 显示帮助信息")
-        fmt.Println(" -c <路径> 指定配置文件路径（默认 config.ini）")
-        fmt.Println(" -i <目录> 指定代理输入目录（可选，覆盖配置文件）")
-        fmt.Println(" -o <目录> 指定输出目录（可选，覆盖配置文件）")
-        fmt.Println(" -s <URL> 指定测速文件地址（可选）")
+        fmt.Println(" -c <路径> 指定配置文件路径（默认 config.ini）") [cite: 60]
+        fmt.Println(" -i <目录> 指定代理输入目录（可选，覆盖配置文件）") [cite: 60]
+        fmt.Println(" -o <目录> 指定输出目录（可选，覆盖配置文件）") [cite: 60]
+        fmt.Println(" -s <URL> 指定测速文件地址（可选）") [cite: 60]
         fmt.Println()
         return
     }
-    // 加载配置文件（在设置测速地址之前加载，以便从 ini 中读取）
-    if err := loadConfig(*configPath); err != nil {
+
+    // --- 新增的逻辑 ---
+    // 1. 检查配置文件是否存在
+    if _, err := os.Stat(*configPath); os.IsNotExist(err) { [cite: 21, 40, 43, 46, 49]
+        // 2. 如果不存在，运行交互式设置
+        if setupErr := interactiveSetup(*configPath); setupErr != nil {
+            log.Fatalf("❌ 交互式设置失败: %v", setupErr)
+        }
+    }
+    // --- 逻辑结束 ---
+
+    // 3. 加载配置文件（无论是已存在的还是刚刚创建的）
+    if err := loadConfig(*configPath); err != nil { [cite: 61]
         log.Fatalf("❌ 配置加载失败: %v", err)
     }
+
+    // (main 函数的剩余部分保持不变)
     // 设置测速地址（优先级：命令行 > ini 配置 > 默认）
     if *speedURL != "" {
         SpeedTestURL = *speedURL
@@ -1660,7 +1741,7 @@ func main() {
         // 确保 URL 是完整的（添加 https:// 前缀如果缺少）
         fullURL := config.Settings.SpeedTestURL
         if !strings.HasPrefix(fullURL, "http://") && !strings.HasPrefix(fullURL, "https://") {
-            fullURL = "https://" + fullURL
+            fullURL = "https://" + fullURL [cite: 62]
         }
         SpeedTestURL = fullURL
     }
@@ -1673,7 +1754,7 @@ func main() {
     }
     // 默认参数修复
     if config.Settings.CheckTimeout <= 0 {
-        config.Settings.CheckTimeout = 10
+        config.Settings.CheckTimeout = 10 [cite: 63]
         log.Printf("⚠️ 未设置检测超时，使用默认值: %d 秒\n", config.Settings.CheckTimeout)
     }
     if config.Settings.MaxConcurrent <= 0 {
@@ -1685,8 +1766,8 @@ func main() {
         log.Printf("⚠️ 未设置代理目录，使用默认值: %s\n", config.Settings.FdipDir)
     }
     if config.Settings.OutputDir == "" {
-        config.Settings.OutputDir = "output"
+        config.Settings.OutputDir = "output" [cite: 64]
         log.Printf("⚠️ 未设置输出目录，使用默认值: %s\n", config.Settings.OutputDir)
     }
-    showMenu()
+    showMenu() [cite: 64]
 }
